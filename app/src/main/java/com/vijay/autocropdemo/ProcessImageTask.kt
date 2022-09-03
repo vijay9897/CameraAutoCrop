@@ -1,34 +1,29 @@
 package com.vijay.autocropdemo
 
-import android.annotation.SuppressLint
-import android.content.Context
 import android.graphics.*
-import android.media.ExifInterface
-import android.net.Uri
-import android.os.AsyncTask
-import com.android.example.cameraxbasic.utils.RealPathUtil
+import androidx.exifinterface.media.ExifInterface
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
 
-
-class ImageProcessingTask(
-    @SuppressLint("StaticFieldLeak") private val context: Context,
-    private val inputUri: Uri?,
+class ProcessImageTask(
+    private val realPath: String?,
     private val outputPath: String,
     private val outputFileName: String,
-    private val mOnImageProcessingListener: OnImageProcessingListener,
+    private val mOnImageProcessingListener: ImageProcessingTask.OnImageProcessingListener,
     private val frameRect: RectF,
     private val targetRect: Rect
-) : AsyncTask<Void?, Void?, File?>() {
-    private var errMsg: String? = null
+): CoroutineAsyncTask<Void, Void?, File?>("ProcessImageTask") {
+
+    private var errorMsg: String? = null
 
     override fun doInBackground(vararg params: Void?): File? {
         var file: File? = null
         try {
-            if (inputUri == null) return null
-            val realPath = RealPathUtil.getRealPathFromURI(context, inputUri) ?: return null
+            if (realPath == null) return null
+//            val realPath = RealPathUtil.getRealPathFromURI(context, inputUri) ?: return null
+
             val bmOptions = BitmapFactory.Options()
             bmOptions.inJustDecodeBounds = true
             val checkFile = File(realPath)
@@ -41,7 +36,7 @@ class ImageProcessingTask(
             val croppedImage = rotatedBmp.cropBitmap()
 
             //compressing bitmap after cropping
-            val byteArray = croppedImage.compress(Bitmap.CompressFormat.WEBP, 90)
+            val byteArray = croppedImage.compress(Bitmap.CompressFormat.JPEG, 90)
 
 //            // Do not allow processed images
 //            if (checkFile.name.startsWith("inventory_")) {
@@ -70,6 +65,14 @@ class ImageProcessingTask(
         return file
     }
 
+    override fun onPostExecute(result: File?) {
+        if (result != null) {
+            mOnImageProcessingListener.onImageProcessingSuccess(result.absolutePath)
+        } else {
+            mOnImageProcessingListener.onImageProcessingFailure(errorMsg)
+        }
+    }
+
     private fun Bitmap.checkRotation(filePath: String): Bitmap {
         val exif = ExifInterface(filePath)
         val orientation: Int = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, 1)
@@ -79,7 +82,7 @@ class ImageProcessingTask(
             3 -> matrix.postRotate(180F)
             8 -> matrix.postRotate(270F)
         }
-        return Bitmap.createBitmap(this, 0, 0, this.width, this.height, matrix, true); // rotating bitmap
+        return Bitmap.createBitmap(this, 0, 0, this.width, this.height, matrix, true) // rotating bitmap
     }
 
     private fun Bitmap.cropBitmap(): Bitmap {
@@ -97,20 +100,5 @@ class ImageProcessingTask(
         val stream = ByteArrayOutputStream()
         this.compress(format, quality, stream)
         return stream.toByteArray()
-    }
-
-    override fun onPostExecute(result: File?) {
-        if (result != null) {
-            mOnImageProcessingListener.onImageProcessingSuccess(result.absolutePath /*, request_code*/)
-        } else {
-            if (errMsg == null || errMsg!!.isEmpty()) errMsg =
-                "Failed to access image. Please try a different image."
-            mOnImageProcessingListener.onImageProcessingFailure(errMsg)
-        }
-    }
-
-    interface OnImageProcessingListener {
-        fun onImageProcessingSuccess(path: String)
-        fun onImageProcessingFailure(err: String?)
     }
 }

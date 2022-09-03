@@ -1,22 +1,21 @@
 package com.vijay.autocropdemo
 
-import android.app.Activity
 import android.content.ContentValues
 import android.content.Intent
 import android.graphics.Rect
 import android.os.Build
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.provider.MediaStore
 import android.util.Log
 import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
-import androidx.lifecycle.lifecycleScope
+import com.android.example.cameraxbasic.utils.RealPathUtil
 import com.vijay.autocropdemo.databinding.ActivityMainBinding
 import java.io.File
 import java.text.SimpleDateFormat
@@ -69,7 +68,8 @@ class MainActivity : AppCompatActivity(), ImageProcessingTask.OnImageProcessingL
                 .also {
                     it.setSurfaceProvider(viewBinding.viewFinder.surfaceProvider)
                 }
-            imageCapture = ImageCapture.Builder().build()
+            imageCapture = ImageCapture.Builder()
+                .build()
             val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
             try {
                 cameraProvider.unbindAll()
@@ -92,7 +92,7 @@ class MainActivity : AppCompatActivity(), ImageProcessingTask.OnImageProcessingL
             put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
             put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
             if (Build.VERSION.SDK_INT > Build.VERSION_CODES.P) {
-                put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/CameraX-Image")
+                put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/CameraDemo-Image")
             }
         }
 
@@ -121,16 +121,17 @@ class MainActivity : AppCompatActivity(), ImageProcessingTask.OnImageProcessingL
 
                     val msg = "Photo capture succeeded: ${output.savedUri}"
                     Toast.makeText(baseContext, msg, Toast.LENGTH_SHORT).show()
-                    lifecycleScope.launchWhenResumed {
-                        ImageProcessingTask(
-                            this@MainActivity,
-                            inputFileUri,
-                            outputFilePath.absolutePath, fileName,
-                            this@MainActivity,
-                            viewBinding.overlayoutView.getRect(),
-                            Rect().apply { viewBinding.viewFinder.getHitRect(this) }
-                        ).execute()
-                    }
+                    ProcessImageTask(
+                        RealPathUtil.getRealPathFromURI(this@MainActivity, inputFileUri!!),
+                        outputFilePath.absolutePath,
+                        fileName,
+                        this@MainActivity,
+                        viewBinding.overlayoutView.getRect(),
+                        Rect().apply { viewBinding.viewFinder.getHitRect(this) }
+                    ).execute()
+//                    lifecycleScope.launchWhenResumed {
+//
+//                    }
                 }
             }
         )
