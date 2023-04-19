@@ -13,7 +13,8 @@ class ProcessImageTask(
     private val outputFileName: String,
     private val mOnImageProcessingListener: ImageProcessingTask.OnImageProcessingListener,
     private val frameRect: RectF,
-    private val targetRect: Rect
+    private val targetRect: Rect,
+    private val cropImage: Boolean = true
 ): CoroutineAsyncTask<Void, Void?, File?>("ProcessImageTask") {
 
     private var errorMsg: String? = null
@@ -36,7 +37,7 @@ class ProcessImageTask(
             val croppedImage = rotatedBmp.cropBitmap()
 
             //compressing bitmap after cropping
-            val byteArray = croppedImage.compress(Bitmap.CompressFormat.JPEG, 90)
+            val byteArray = croppedImage.compress(Bitmap.CompressFormat.WEBP, 90)
 
 //            // Do not allow processed images
 //            if (checkFile.name.startsWith("inventory_")) {
@@ -45,7 +46,7 @@ class ProcessImageTask(
 //            }
             val destDir = File(outputPath)
             if (!destDir.exists()) destDir.mkdirs()
-            file = File(destDir, "$outputFileName.jpeg")
+            file = File(destDir, "$outputFileName.webp")
             var fos: FileOutputStream? = null
             try {
                 fos = FileOutputStream(file)
